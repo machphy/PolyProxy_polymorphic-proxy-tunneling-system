@@ -1,35 +1,31 @@
----
-
-NeuroTunnel — Advanced Tunneling & Virtual Networking (FRP Based)
-
-Tagline: Exploring intelligent tunneling, plugin-driven proxies, and VPN-like virtual networks.
-
 
 ---
 
-Overview
+# Fast Reverse Proxy (FRP) – Documentation
 
-NeuroTunnel is a research-focused project built on Fast Reverse Proxy (FRP), a high-performance reverse proxy application. FRP allows exposing local services (behind NAT/firewalls) to the public internet through a remote server.
+##  Overview
 
-The main architecture:
+**FRP (Fast Reverse Proxy)** is a **high-performance reverse proxy application**.
+It allows users to expose **local services** (running on private networks or behind NAT/firewalls) to the **public internet** through a remote FRP server.
 
-frpc (client): Runs on your local machine and forwards local TCP/UDP services.
+###  Core Idea
 
-frps (server): Runs on a publicly accessible server and receives forwarded traffic.
-
-
-This project explores advanced features of FRP and extends it with research-focused experiments for secure, scalable networking.
-
+* Run **`frpc` (client)** on your **local machine**.
+* Run **`frps` (server)** on a **remote server** with public access.
+* `frpc` forwards your **local TCP/UDP services** → `frps` → makes them **publicly accessible**.
 
 ---
 
-Key Features
+##  Features
 
-1. Port Range Mapping (v0.56.0)
+### 🔹 Port Range Mapping (v0.56.0+)
 
-Automates creation of multiple proxy configurations using Go templates and parseNumberRangePair.
-Example:
+FRP supports **port range mapping** using Go template’s `parseNumberRangePair`.
+This allows you to create **multiple proxy configs at once** instead of writing them individually.
 
+**Example:**
+
+```toml
 {{- range $_, $v := parseNumberRangePair "6000-6006,6007" "6000-6006,6007" }}
 [[proxies]]
 name = "tcp-{{ $v.First }}"
@@ -37,35 +33,31 @@ type = "tcp"
 localPort = {{ $v.First }}
 remotePort = {{ $v.Second }}
 {{- end }}
+```
 
-Creates 8 proxies (tcp-6000 → tcp-6007), each mapping the remote port to the corresponding local port.
-
+ This configuration creates **8 proxies**:
+`tcp-6000` → `tcp-6007`
 
 ---
 
-2. Client Plugins
+### 🔹 Client Plugins
 
-Extend FRPC functionality beyond simple TCP/UDP forwarding.
+By default, `frpc` forwards only **TCP/UDP ports**.
+Plugins extend `frpc` with **additional features**.
 
-Built-in Plugins:
+#### Built-in Plugins
 
-unix_domain_socket
+* `unix_domain_socket`
+* `http_proxy`
+* `socks5`
+* `static_file`
+* `http2https`
+* `https2http`
+* `https2https`
 
-http_proxy
+**Example – HTTP Proxy Plugin:**
 
-socks5
-
-static_file
-
-http2https
-
-https2http
-
-https2https
-
-
-HTTP Proxy Example:
-
+```toml
 [[proxies]]
 name = "http_proxy"
 type = "tcp"
@@ -75,116 +67,94 @@ remotePort = 6000
 type = "http_proxy"
 httpUser = "abc"
 httpPassword = "abc"
+```
 
-httpUser and httpPassword are authentication credentials.
-
-
-
----
-
-3. Server Manage Plugins
-
-FRPS supports server-side plugins for extended functionality.
-
-Additional plugins are implemented using the FRP extension mechanism.
-
-Plugins can customize proxy behavior and protocol handling.
-
-
+Here, `httpUser` and `httpPassword` are **authentication credentials**.
 
 ---
 
-4. SSH Tunnel Gateway (v0.53.0)
+### 🔹 Server Manage Plugins
 
-Enables TCP proxying via SSH -R protocol, without requiring frpc.
+The FRP server (`frps`) also supports **server-side plugins** to extend functionality.
+Additional plugins are available in the **FRP plugin repository**, built using FRP’s **extension mechanism**.
 
-Configuration:
+---
 
+### 🔹 SSH Tunnel Gateway (v0.53.0+)
+
+FRP supports listening on an **SSH port** on the `frps` side.
+This allows **TCP proxying via ssh -R protocol**, without requiring `frpc`.
+
+**Example Config:**
+
+```toml
 # frps.toml
 sshTunnelGateway.bindPort = 2200
+```
 
-Example Command:
+When started, `frps` generates a **private key** (`.autogen_ssh_key`) in the working directory.
 
-ssh -R :80:127.0.0.1:8080 v0@<frp_address> -p 2200 \
+**Usage Command:**
+
+```bash
+ssh -R :80:127.0.0.1:8080 v0@{frp_address} -p 2200 \
     tcp --proxy_name "test-tcp" --remote_port 9090
+```
 
-Forwards local port 8080 → remote 9090
+Equivalent to running:
 
-Equivalent frpc command:
-
-
+```bash
 frpc tcp --proxy_name "test-tcp" \
          --local_ip 127.0.0.1 \
          --local_port 8080 \
          --remote_port 9090
-
+```
 
 ---
 
-5. Virtual Network (VirtualNet) — Alpha Feature (v0.62.0)
+### 🔹 Virtual Network (VirtualNet) – Alpha (v0.62.0+)
 
-Creates and manages TUN-based virtual networks for full IP-level routing (VPN-like).
+FRP now supports **virtual networking** via a **TUN interface**, extending beyond port forwarding to **full IP-level routing (like a VPN)**.
 
-Enable VirtualNet:
+**Enable in config:**
 
+```toml
 featureGates = { VirtualNet = true }
-
-
----
-
-6. Feature Gates
-
-Allow enabling/disabling experimental FRP features.
-
-Lifecycle:
-
-1. ALPHA: Disabled by default, may be unstable
-
-
-2. BETA: More stable, may be enabled by default
-
-
-3. GA: Production-ready, enabled by default
-
-
-
-
+```
 
 ---
 
-Related Projects
+##  Feature Gates
 
-gofrp/plugin: Repository for additional FRP plugins.
+Feature gates control **experimental features** in FRP.
 
-gofrp/tiny-frpc: Lightweight (~3.5MB) FRP client using SSH protocol.
+| Feature    | Stage | Default | Description                            |
+| ---------- | ----- | ------- | -------------------------------------- |
+| VirtualNet | ALPHA | false   | Enables virtual networking (TUN-based) |
 
+**Lifecycle:**
 
-
----
-
-Why NeuroTunnel?
-
-This project pushes FRP beyond simple port forwarding into a next-generation tunneling and networking framework:
-
-Automates proxy creation via port range mapping.
-
-Extends functionality with plugins.
-
-Enables SSH-based dynamic proxy creation.
-
-Explores VPN-like virtual networks using TUN interfaces.
-
-
-Suitable for developers, sysadmins, and cybersecurity researchers exploring adaptive, secure, and polymorphic networking solutions.
-
+1. **ALPHA** → Disabled by default, may be unstable.
+2. **BETA** → More stable, may be enabled by default.
+3. **GA (Generally Available)** → Production-ready, enabled by default.
 
 ---
 
-Contact / Collaboration
+##  Related Projects
 
-Project is continuously evolving. Feedback, ideas, or contributions are welcome.
-Reach out: rajeevsharmamachphy@gmail.com
-
+* **gofrp/plugin** → Additional FRP plugins (via extension mechanism).
+* **gofrp/tiny-frpc** → Lightweight FRP client (~3.5 MB) using SSH protocol, ideal for **low-resource devices**.
 
 ---
+
+##  Project Status
+
+ Work in Progress – This documentation and project will evolve with more features, research, and security extensions.
+
+ Suggestions or collaboration ideas are welcome → **reach out at:**
+ [rajeevsharmamachphy@gmail.com](mailto:rajeevsharmamachphy@gmail.com)
+
+---
+
+
 
