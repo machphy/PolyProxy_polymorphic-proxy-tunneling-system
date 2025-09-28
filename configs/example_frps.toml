@@ -1,0 +1,21 @@
+# FRP server configuration (example_frps.toml)
+
+[common]
+# port for frpc to connect to frps
+bind_port = 7000
+
+# optional dashboard
+dashboard_addr = "0.0.0.0"
+dashboard_port = 7500
+dashboard_user = "admin"
+dashboard_pwd = "admin"
+
+# vhost example (optional)
+vhost_http_port = 8080
+vhost_https_port = 8443
+
+# allow port ranges if you want to limit what remote ports may be used
+# allow_ports = [
+#   { start = 2000, end = 3000 },
+#   { single = 6000 }
+# ]

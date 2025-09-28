@@ -1,0 +1,60 @@
+# FRP client configuration (example_frpc.toml)
+
+[common]
+server_addr = "127.0.0.1"
+server_port = 7000
+# Optional: client identity token (if server uses token auth)
+# auth_token = "supersecret"
+
+################################################################################
+# 1) Simple TCP proxy (expose local TCP service)
+################################################################################
+[[proxies]]
+name = "ssh_local"
+type = "tcp"
+local_ip = "127.0.0.1"
+local_port = 22
+remote_port = 6000
+
+################################################################################
+# 2) HTTP proxy plugin (plugin runs on client side to provide an HTTP proxy)
+#    Connect to it as: http://user123:pass123@<frps_ip>:6001
+################################################################################
+[[proxies]]
+name = "http_proxy_test"
+type = "tcp"           # plugin sits on top of tcp forwarding
+remote_port = 6001
+
+[proxies.plugin]
+type = "http_proxy"
+http_user = "user123"
+http_password = "pass123"
+
+################################################################################
+# 3) SOCKS5 plugin (SOCKS tunnel). Connect via SOCKS5 client to remote_port.
+################################################################################
+[[proxies]]
+name = "socks5_proxy"
+type = "tcp"
+remote_port = 6002
+
+[proxies.plugin]
+type = "socks5"
+socks5_user = "socksuser"
+socks5_password = "sockspass"
+
+################################################################################
+# 4) Port Range Mapping (creates many proxies using template - v0.56.0 style)
+#    This snippet shows how you would write the template. Your client must
+#    support template expansion (as FRP does) for this to take effect.
+################################################################################
+# NOTE: Your implementation must support parseNumberRangePair template function
+# to expand the following block. Save this text as a fragment and include it
+# or place it in your frpc template-enabled config.
+{{- range $_, $v := parseNumberRangePair "7000-7003" "7000-7003" }}
+[[proxies]]
+name = "tcp-{{ $v.First }}"
+type = "tcp"
+local_port = {{ $v.First }}
+remote_port = {{ $v.Second }}
+{{- end }}
